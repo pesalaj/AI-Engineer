@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>NamePlate OCR Reader</title>
+  <!-- Font Awesome 6 for professional icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+      background: linear-gradient(145deg, #e9f0f8 0%, #d9e2ef 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 36px;
+      box-shadow: 0 30px 50px rgba(0, 20, 40, 0.15), inset 0 -2px 0 rgba(255,255,255,0.6);
+      padding: 24px 20px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      margin: -24px -20px 0;
+      padding: 20px 24px;
+      border-radius: 36px 36px 20px 20px;
+      color: white;
+      box-shadow: 0 8px 18px rgba(30,60,114,0.3);
+    }
+
+    .header i {
+      font-size: 2.2rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Upload card */
+    .upload-card {
+      background: white;
+      border-radius: 24px;
+      padding: 24px 16px;
+      text-align: center;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+      transition: all 0.2s ease;
+      border: 2px dashed #cbd5e1;
+      cursor: pointer;
+    }
+
+    .upload-card:active {
+      background: #f8fafc;
+      border-color: #2a5298;
+      transform: scale(0.98);
+    }
+
+    .upload-card i {
+      font-size: 3rem;
+      color: #2a5298;
+      margin-bottom: 12px;
+    }
+
+    .upload-card p {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #1e293b;
+      margin: 8px 0 4px;
+    }
+
+    .upload-card small {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* Preview image */
+    .image-preview {
+      display: none;
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 20px;
+      background: #f1f5f9;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      margin: 8px 0;
+    }
+
+    .image-preview.show {
+      display: block;
+    }
+
+    /* Result card */
+    .result-card {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .text-output {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 1.1rem;
+      min-height: 70px;
+      word-break: break-word;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .text-output:empty::before {
+      content: "OCR result will appear here...";
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 100px;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 18px;
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: white;
+      color: #1e293b;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+      background: #f1f5f9;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 18px rgba(30,60,114,0.3);
+    }
+
+    .btn.primary:disabled {
+      background: #94a3b8;
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .btn i {
+      font-size: 1.2rem;
+    }
+
+    /* Loader */
+    .loader {
+      display: none;
+      width: 100%;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      color: #2a5298;
+      font-weight: 500;
+      padding: 12px;
+    }
+
+    .loader.show {
+      display: flex;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #2a5298;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <i class="fas fa-id-card"></i>
+      <h1>NamePlate Reader</h1>
+    </div>
+
+    <!-- Upload area (tap to open camera/gallery on mobile) -->
+    <label for="fileInput" class="upload-card" id="uploadLabel">
+      <i class="fas fa-camera"></i>
+      <p>Tap to capture nameplate</p>
+      <small>Upload a clear photo</small>
+    </label>
+    <input type="file" id="fileInput" accept="image/*" capture="environment">
+
+    <!-- Image preview -->
+    <img id="imagePreview" class="image-preview" alt="Preview">
+
+    <!-- Processing loader -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Extracting text...</span>
+    </div>
+
+    <!-- Result card -->
+    <div class="result-card">
+      <div class="text-output" id="ocrResult"></div>
+      <div class="action-buttons">
+        <button class="btn primary" id="speakBtn" disabled>
+          <i class="fas fa-volume-up"></i> Speak
+        </button>
+        <button class="btn" id="clearBtn">
+          <i class="fas fa-undo-alt"></i> Clear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Tesseract.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    (function() {
+      const fileInput = document.getElementById('fileInput');
+      const uploadLabel = document.getElementById('uploadLabel');
+      const imagePreview = document.getElementById('imagePreview');
+      const ocrResult = document.getElementById('ocrResult');
+      const speakBtn = document.getElementById('speakBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const loader = document.getElementById('loader');
+      const toast = document.getElementById('toast');
+
+      let currentExtractedText = '';
+      let currentImageUrl = '';
+
+      // Helper: show toast
+      function showToast(message, duration = 2500) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+      }
+
+      // Reset UI state
+      function resetUI() {
+        imagePreview.classList.remove('show');
+        imagePreview.src = '';
+        ocrResult.textContent = '';
+        speakBtn.disabled = true;
+        currentExtractedText = '';
+        currentImageUrl = '';
+        fileInput.value = ''; // allow re-upload of same file
+        loader.classList.remove('show');
+      }
+
+      // Process image with Tesseract
+      async function performOCR(imageFile) {
+        const imageUrl = URL.createObjectURL(imageFile);
+        currentImageUrl = imageUrl;
+        imagePreview.src = imageUrl;
+        imagePreview.classList.add('show');
+        loader.classList.add('show');
+        ocrResult.textContent = '';
+        speakBtn.disabled = true;
+
+        try {
+          // Recognize text with English language
+          const { data: { text } } = await Tesseract.recognize(
+            imageFile,
+            'eng',
+            {
+              logger: (m) => {
+                if (m.status === 'recognizing text') {
+                  // You can show progress if needed; we use spinner.
+                  console.log('OCR progress:', Math.round(m.progress * 100), '%');
+                }
+              }
+            }
+          );
+
+          const cleanedText = text.trim();
+          ocrResult.textContent = cleanedText || '(No text found)';
+          currentExtractedText = cleanedText;
+          if (cleanedText) {
+            speakBtn.disabled = false;
+          } else {
+            showToast('No readable text detected. Try a clearer photo.', 3000);
+          }
+        } catch (error) {
+          console.error('OCR error:', error);
+          ocrResult.textContent = 'Error during OCR. Please try again.';
+          showToast('OCR failed. Please try another image.', 3000);
+        } finally {
+          loader.classList.remove('show');
+          // Revoke object URL after a short delay to ensure image is loaded
+          setTimeout(() => {
+            if (currentImageUrl && imagePreview.src.startsWith('blob:')) {
+              URL.revokeObjectURL(currentImageUrl);
+              currentImageUrl = '';
+            }
+          }, 1000);
+        }
+      }
+
+      // Speech synthesis
+      function speakText(text) {
+        if (!text || !window.speechSynthesis) {
+          showToast('Speech synthesis not supported or no text.');
+          return;
+        }
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.95; // slightly slower for clarity
+        utterance.pitch = 1.0;
+        utterance.volume = 1;
+
+        // On mobile, some browsers require user activation; we already have it.
+        window.speechSynthesis.speak(utterance);
+      }
+
+      // Event listeners
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Basic validation
+        if (!file.type.startsWith('image/')) {
+          showToast('Please select a valid image file.');
+          fileInput.value = '';
+          return;
+        }
+
+        // Reset previous state and start OCR
+        resetUI();
+        performOCR(file);
+      });
+
+      // Allow tapping the label to open camera (works with the hidden input)
+      uploadLabel.addEventListener('click', (e) => {
+        // Just let label trigger the input
+      });
+
+      // Speak button
+      speakBtn.addEventListener('click', () => {
+        if (currentExtractedText) {
+          speakText(currentExtractedText);
+        } else {
+          showToast('Nothing to speak.');
+        }
+      });
+
+      // Clear button
+      clearBtn.addEventListener('click', () => {
+        // Cancel any speech
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+        resetUI();
+        showToast('Cleared. You can upload a new image.', 2000);
+      });
+
+      // Handle mobile back/refresh page – revoke any pending object URL
+      window.addEventListener('beforeunload', () => {
+        if (currentImageUrl && currentImageUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(currentImageUrl);
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>
