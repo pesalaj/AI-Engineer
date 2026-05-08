@@ -4,123 +4,233 @@
   <title>Industrial AI Assistant</title>
 
   <style>
-    body{
+
+    *{
       margin:0;
+      padding:0;
+      box-sizing:border-box;
       font-family:Arial;
-      background:#0f172a;
+    }
+
+    body{
+      background:#0b1120;
       color:white;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
     }
 
     header{
       background:#111827;
-      padding:15px;
+      padding:18px;
       text-align:center;
       font-size:24px;
       font-weight:bold;
+      border-bottom:1px solid #1f2937;
+    }
+
+    #main{
+      flex:1;
+      display:flex;
+      overflow:hidden;
+    }
+
+    /* SIDEBAR */
+
+    #sidebar{
+      width:260px;
+      background:#111827;
+      border-right:1px solid #1f2937;
+      padding:20px;
+    }
+
+    .tab{
+      background:#1f2937;
+      padding:14px;
+      margin-bottom:12px;
+      border-radius:10px;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    .tab:hover{
+      background:#2563eb;
+    }
+
+    /* CONTENT */
+
+    #content{
+      flex:1;
+      padding:20px;
+      overflow:auto;
+    }
+
+    .panel{
+      background:#111827;
+      border-radius:15px;
+      padding:20px;
+      margin-bottom:20px;
+      border:1px solid #1f2937;
+    }
+
+    h3{
+      margin-bottom:15px;
+      color:#60a5fa;
+    }
+
+    button{
+      background:#2563eb;
+      color:white;
+      border:none;
+      padding:12px 20px;
+      border-radius:10px;
+      font-size:16px;
+      cursor:pointer;
+    }
+
+    button:hover{
+      background:#1d4ed8;
+    }
+
+    input[type=file]{
+      margin-top:15px;
+      color:white;
+    }
+
+    #preview{
+      margin-top:15px;
+      max-width:220px;
+      border-radius:10px;
+      display:none;
     }
 
     #chat{
-      height:65vh;
+      height:300px;
       overflow-y:auto;
+      background:#0f172a;
       padding:15px;
+      border-radius:10px;
     }
 
     .msg{
-      margin:10px;
       padding:12px;
-      border-radius:12px;
-      max-width:80%;
-      line-height:1.4;
+      margin-bottom:10px;
+      border-radius:10px;
+      line-height:1.5;
     }
 
     .user{
       background:#2563eb;
-      margin-left:auto;
+      text-align:right;
     }
 
     .ai{
       background:#374151;
-      margin-right:auto;
-    }
-
-    #controls{
-      position:fixed;
-      bottom:0;
-      width:100%;
-      background:#111827;
-      padding:10px;
-      text-align:center;
-    }
-
-    button{
-      padding:12px 20px;
-      border:none;
-      border-radius:10px;
-      font-size:16px;
-      cursor:pointer;
-      background:#2563eb;
-      color:white;
-    }
-
-    input[type=file]{
-      color:white;
-      margin-top:10px;
-    }
-
-    #preview{
-      max-width:150px;
-      border-radius:10px;
-      margin-top:10px;
-      display:none;
     }
 
     #status{
-      margin-top:8px;
+      margin-top:15px;
       color:#9ca3af;
-      font-size:14px;
     }
 
-    #avatar{
-      font-size:55px;
-      margin-top:10px;
+    .infoBox{
+      background:#0f172a;
+      padding:15px;
+      border-radius:10px;
+      margin-top:15px;
+      line-height:1.6;
     }
+
   </style>
 </head>
 
 <body>
 
 <header>
-  Industrial AI Assistant
+  Industrial AI Diagnostic Assistant
 </header>
 
-<div id="chat"></div>
+<div id="main">
 
-<div id="controls">
+  <!-- SIDEBAR -->
 
-  <button onclick="startAssistant()">🎤 Start Assistant</button>
+  <div id="sidebar">
 
-  <br>
+    <div class="tab">Dashboard</div>
 
-  <input type="file" id="imageInput" accept="image/*">
+    <div class="tab">Voice Assistant</div>
 
-  <br>
+    <div class="tab">Image Analysis</div>
 
-  <img id="preview">
+    <div class="tab">Generator Diagnostics</div>
 
-  <div id="status">Idle</div>
+    <div class="tab">ATS Diagnostics</div>
 
-  <div id="avatar">🙂</div>
+    <div class="tab">System Status</div>
+
+  </div>
+
+  <!-- CONTENT -->
+
+  <div id="content">
+
+    <!-- VOICE PANEL -->
+
+    <div class="panel">
+
+      <h3>Voice Control</h3>
+
+      <button onclick="startAssistant()">
+        Start Assistant
+      </button>
+
+      <div id="status">
+        Status: Idle
+      </div>
+
+    </div>
+
+    <!-- IMAGE PANEL -->
+
+    <div class="panel">
+
+      <h3>Upload Equipment Image</h3>
+
+      <input type="file" id="imageInput" accept="image/*">
+
+      <br>
+
+      <img id="preview">
+
+      <div class="infoBox">
+        Upload generator, ATS panel, wiring, alarm display or damaged component images for better assistance.
+      </div>
+
+    </div>
+
+    <!-- CHAT PANEL -->
+
+    <div class="panel">
+
+      <h3>Diagnostic Conversation</h3>
+
+      <div id="chat"></div>
+
+    </div>
+
+  </div>
 
 </div>
 
 <script>
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
 const recognition = new SpeechRecognition();
 
 recognition.lang = "en-US";
-recognition.continuous = false;
-recognition.interimResults = false;
 
 let active = false;
 let imageUploaded = false;
@@ -137,19 +247,18 @@ function addMessage(text,type){
 
   div.innerText = text;
 
-  document.getElementById("chat").appendChild(div);
+  document.getElementById("chat")
+  .appendChild(div);
 
-  document.getElementById("chat").scrollTop =
-  document.getElementById("chat").scrollHeight;
+  document.getElementById("chat")
+  .scrollTop =
+  document.getElementById("chat")
+  .scrollHeight;
 }
 
-function setStatus(text){
-  document.getElementById("status").innerText = text;
-}
-
-function avatar(talk){
-  document.getElementById("avatar").innerText =
-  talk ? "🗣️" : "🙂";
+function setStatus(t){
+  document.getElementById("status")
+  .innerText = "Status: " + t;
 }
 
 // ================= START =================
@@ -159,7 +268,7 @@ function startAssistant(){
   active = true;
 
   speak(
-    "Hello. Industrial assistant activated. Please describe your generator or ATS problem."
+    "Industrial assistant activated. Please describe your equipment problem."
   );
 }
 
@@ -167,16 +276,11 @@ function startAssistant(){
 
 function speak(text){
 
-  avatar(true);
-
   let msg = new SpeechSynthesisUtterance(text);
 
   msg.rate = 1;
-  msg.pitch = 1;
 
   msg.onend = function(){
-
-    avatar(false);
 
     if(active){
       listen();
@@ -192,34 +296,33 @@ function listen(){
 
   if(!active) return;
 
-  setStatus("Listening...");
+  setStatus("Listening");
 
   try{
     recognition.start();
-  }catch(e){
+  }catch{
     setTimeout(listen,1000);
   }
 }
 
-// ================= VOICE INPUT =================
+// ================= INPUT =================
 
 recognition.onresult = function(event){
 
-  let text = event.results[0][0].transcript.toLowerCase();
+  let text =
+  event.results[0][0]
+  .transcript
+  .toLowerCase();
 
   addMessage(text,"user");
 
-  setStatus("Thinking...");
+  setStatus("Analysing");
 
   let reply = brain(text);
 
   addMessage(reply,"ai");
 
   speak(reply);
-};
-
-recognition.onerror = function(){
-  setTimeout(listen,1200);
 };
 
 recognition.onend = function(){
@@ -229,9 +332,14 @@ recognition.onend = function(){
   }
 };
 
+recognition.onerror = function(){
+  setTimeout(listen,1200);
+};
+
 // ================= IMAGE =================
 
-document.getElementById("imageInput").onchange = function(e){
+document.getElementById("imageInput")
+.onchange = function(e){
 
   let file = e.target.files[0];
 
@@ -243,7 +351,8 @@ document.getElementById("imageInput").onchange = function(e){
 
     reader.onload = function(){
 
-      let img = document.getElementById("preview");
+      let img =
+      document.getElementById("preview");
 
       img.src = reader.result;
 
@@ -252,55 +361,62 @@ document.getElementById("imageInput").onchange = function(e){
 
     reader.readAsDataURL(file);
 
-    addMessage("Image uploaded","user");
+    addMessage(
+      "Equipment image uploaded",
+      "user"
+    );
 
     speak(
-      "Image received. Please describe the issue."
+      "Image received. Please describe the fault."
     );
   }
 };
 
-// ================= AI LOGIC =================
+// ================= AI =================
 
 function brain(t){
 
   // END
   if(match(t,[
-    "thank you",
     "bye",
+    "thank you",
     "disconnect",
     "end"
   ])){
 
     active = false;
 
-    return "Conversation ended. Goodbye.";
+    return "Session completed. System disconnected.";
   }
 
   // START ISSUE
   if(match(t,[
     "not starting",
     "fails to start",
-    "cannot start",
-    "won't start"
+    "cannot start"
   ])){
 
-    mode = "start_issue";
+    mode = "start";
+
     step = 1;
 
-    return "Generator not starting. Is battery voltage above 12 point 5 volts?";
+    return "Check battery voltage. Is battery above 12 point 5 volts?";
   }
 
-  // FLOW
-  if(mode === "start_issue"){
+  if(mode === "start"){
 
     if(step === 1){
 
       if(isYes(t)){
+
         step = 2;
+
         return "Do you hear starter relay clicking?";
-      }else{
+      }
+      else{
+
         mode = "general";
+
         return "Battery problem detected. Charge or replace battery.";
       }
     }
@@ -308,11 +424,16 @@ function brain(t){
     if(step === 2){
 
       if(isYes(t)){
+
         step = 3;
-        return "Is fuel reaching the engine properly?";
-      }else{
+
+        return "Is fuel reaching engine correctly?";
+      }
+      else{
+
         mode = "general";
-        return "Starter relay or ATS signal fault.";
+
+        return "Starter relay or ATS control fault.";
       }
     }
 
@@ -321,9 +442,12 @@ function brain(t){
       mode = "general";
 
       if(isYes(t)){
-        return "Possible starter motor or control board fault.";
-      }else{
-        return "Fuel blockage or fuel solenoid problem.";
+
+        return "Possible starter motor or controller fault.";
+      }
+      else{
+
+        return "Fuel blockage or fuel solenoid issue.";
       }
     }
   }
@@ -331,16 +455,16 @@ function brain(t){
   // ATS
   if(t.includes("ats")){
 
-    return "Check ATS contactor, sensing voltage, control fuse and relay.";
+    return "Check ATS contactor, sensing voltage, relay and control fuse.";
   }
 
   // OVERLOAD
   if(t.includes("overload")){
 
-    return "Reduce electrical load and verify generator capacity.";
+    return "Reduce load and verify generator capacity.";
   }
 
-  // IMAGE CONTEXT
+  // IMAGE SUPPORT
   if(imageUploaded){
 
     if(match(t,[
@@ -349,7 +473,7 @@ function brain(t){
       "black"
     ])){
 
-      return "Possible overheating or burnt wiring. Inspect insulation and terminals.";
+      return "Possible burnt wiring or overheating condition detected.";
     }
 
     if(match(t,[
@@ -358,18 +482,11 @@ function brain(t){
       "leak"
     ])){
 
-      return "Possible oil or fuel leak. Check pipes, seals and tank connections.";
+      return "Possible fuel or oil leakage. Inspect seals and pipes.";
     }
   }
 
-  // SHORT REPLY
-  if(t.length < 4){
-
-    return "Please describe the issue more clearly.";
-  }
-
-  // DEFAULT
-  return "Describe symptoms like sound, voltage, smell or machine behavior for better diagnosis.";
+  return "Please describe symptoms like sound, voltage, alarms or behavior for further diagnosis.";
 }
 
 // ================= HELPERS =================
@@ -382,12 +499,11 @@ function isYes(t){
 
   return [
     "yes",
-    "yeah",
+    "ok",
     "correct",
     "working",
-    "ok",
-    "right",
-    "fine"
+    "fine",
+    "right"
   ].some(x => t.includes(x));
 }
 
