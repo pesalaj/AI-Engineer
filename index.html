@@ -43,6 +43,7 @@
       background:#111827;
       border-right:1px solid #1f2937;
       padding:20px;
+      overflow:auto;
     }
 
     .tab{
@@ -90,7 +91,7 @@
     }
 
     #chat{
-      height:420px;
+      height:430px;
       overflow-y:auto;
       background:#0f172a;
       border-radius:10px;
@@ -162,13 +163,13 @@
 
     <div class="tab">Dashboard</div>
     <div class="tab">Voice Assistant</div>
-    <div class="tab">Generator Systems</div>
+    <div class="tab">Generators</div>
     <div class="tab">ATS Systems</div>
     <div class="tab">Motors</div>
     <div class="tab">Compressors</div>
     <div class="tab">Pumps</div>
     <div class="tab">HVAC</div>
-    <div class="tab">Electrical</div>
+    <div class="tab">Electrical Systems</div>
 
   </div>
 
@@ -191,7 +192,7 @@
       </div>
 
       <div class="info">
-        Continuous industrial diagnostic conversation enabled.
+        Continuous industrial diagnostic discussion enabled.
       </div>
 
     </div>
@@ -247,6 +248,11 @@ let currentEquipment = "";
 let currentFault = "";
 
 let lastQuestion = "";
+
+let diagnosisComplete = false;
+
+let probableIssue = "";
+let estimatedCost = "";
 
 let memory = [];
 
@@ -419,6 +425,8 @@ document.getElementById("imageInput")
 
 function brain(t){
 
+  detectEquipment(t);
+
   // ================= END =================
 
   if(match(t,[
@@ -434,11 +442,55 @@ function brain(t){
     return "Session completed. Industrial assistant disconnected.";
   }
 
-  // ================= EQUIPMENT =================
+  // ================= AFTER DIAGNOSIS QUESTIONS =================
 
-  detectEquipment(t);
+  if(diagnosisComplete){
 
-  // ================= FOLLOW-UP ANSWERS =================
+    if(match(t,[
+      "repair",
+      "fix",
+      "how to repair"
+    ])){
+
+      return "Recommended repair: " +
+      probableIssue +
+      ". Ensure qualified technician inspection before replacing parts.";
+    }
+
+    if(match(t,[
+      "cost",
+      "price",
+      "estimate"
+    ])){
+
+      return "Estimated repair cost for " +
+      probableIssue +
+      " is approximately " +
+      estimatedCost +
+      " depending on parts and labour.";
+    }
+
+    if(match(t,[
+      "where",
+      "service",
+      "repair shop",
+      "technician"
+    ])){
+
+      return "Recommended: contact generator, motor or industrial electrical service center near your location. Prefer authorized repair centers for controller or ATS issues.";
+    }
+
+    if(match(t,[
+      "why",
+      "reason",
+      "cause"
+    ])){
+
+      return "Likely causes include overload, aging components, loose wiring, overheating, insufficient maintenance or unstable supply conditions.";
+    }
+  }
+
+  // ================= FOLLOW-UP =================
 
   if(lastQuestion === "voltage"){
 
@@ -450,9 +502,12 @@ function brain(t){
     }
     else{
 
-      lastQuestion = "";
+      finishDiagnosis(
+        "Power supply or battery failure",
+        "$50 to $250"
+      );
 
-      return "Power supply issue detected. Check battery, charger, fuse and terminals.";
+      return diagnosisResult();
     }
   }
 
@@ -466,27 +521,38 @@ function brain(t){
     }
     else{
 
-      lastQuestion = "";
+      finishDiagnosis(
+        "Starter relay or contactor failure",
+        "$80 to $350"
+      );
 
-      return "Possible relay, contactor or starter solenoid issue.";
+      return diagnosisResult();
     }
   }
 
   if(lastQuestion === "fuel"){
 
-    lastQuestion = "";
-
     if(isYes(t)){
 
-      return "Likely controller, starter motor or timing issue. Check ECU or control board.";
+      finishDiagnosis(
+        "Starter motor, ECU or control board issue",
+        "$200 to $1200"
+      );
+
+      return diagnosisResult();
     }
     else{
 
-      return "Possible blockage, clogged filter or supply interruption.";
+      finishDiagnosis(
+        "Fuel blockage or supply interruption",
+        "$50 to $300"
+      );
+
+      return diagnosisResult();
     }
   }
 
-  // ================= NOT STARTING =================
+  // ================= START ISSUE =================
 
   if(match(t,[
     "not starting",
@@ -494,6 +560,8 @@ function brain(t){
     "fails to start",
     "wont start"
   ])){
+
+    diagnosisComplete = false;
 
     currentFault = "start";
 
@@ -508,11 +576,16 @@ function brain(t){
 
   if(match(t,[
     "overheat",
-    "hot",
-    "high temperature"
+    "high temperature",
+    "too hot"
   ])){
 
-    return "Check cooling system, airflow, coolant level and operating load. Is cooling fan functioning properly?";
+    finishDiagnosis(
+      "Cooling or overload problem",
+      "$100 to $800"
+    );
+
+    return diagnosisResult();
   }
 
   // ================= NOISE =================
@@ -520,11 +593,15 @@ function brain(t){
   if(match(t,[
     "noise",
     "vibration",
-    "sound",
     "knocking"
   ])){
 
-    return "Abnormal noise may indicate bearing wear, imbalance or loose mounting. Is the sound metallic or vibrating?";
+    finishDiagnosis(
+      "Bearing wear or mechanical imbalance",
+      "$150 to $900"
+    );
+
+    return diagnosisResult();
   }
 
   // ================= NO POWER =================
@@ -535,20 +612,30 @@ function brain(t){
     "no output"
   ])){
 
-    return "Check breakers, protection relays, AVR, fuses and output terminals. Is breaker tripped?";
+    finishDiagnosis(
+      "Breaker, AVR or protection system fault",
+      "$120 to $1000"
+    );
+
+    return diagnosisResult();
   }
 
-  // ================= TRIP =================
+  // ================= TRIPPING =================
 
   if(match(t,[
     "trip",
     "tripping"
   ])){
 
-    return "Protection trip detected. Check overload, short circuit, earth fault and current imbalance.";
+    finishDiagnosis(
+      "Overload or short circuit condition",
+      "$100 to $700"
+    );
+
+    return diagnosisResult();
   }
 
-  // ================= IMAGE CONTEXT =================
+  // ================= IMAGE =================
 
   if(imageUploaded){
 
@@ -558,7 +645,12 @@ function brain(t){
       "black"
     ])){
 
-      return "Possible burnt wiring or overheating condition detected. Inspect terminals and insulation carefully.";
+      finishDiagnosis(
+        "Burnt wiring or overheating damage",
+        "$80 to $600"
+      );
+
+      return diagnosisResult();
     }
 
     if(match(t,[
@@ -567,45 +659,53 @@ function brain(t){
       "fuel leak"
     ])){
 
-      return "Leakage detected. Inspect seals, hoses, tanks and pipe connections.";
+      finishDiagnosis(
+        "Seal, hose or pipe leakage",
+        "$40 to $400"
+      );
+
+      return diagnosisResult();
     }
   }
 
-  // ================= EQUIPMENT-SPECIFIC =================
+  // ================= EQUIPMENT QUESTIONS =================
 
-  if(currentEquipment === "generator"){
+  if(match(t,[
+    "how does it work",
+    "working principle",
+    "explain"
+  ])){
 
-    return "Generator diagnostics active. Check fuel system, AVR, governor, battery voltage and protection alarms.";
-  }
-
-  if(currentEquipment === "ats"){
-
-    return "ATS diagnostics active. Check sensing voltage, contactors, timers and interlock sequence.";
-  }
-
-  if(currentEquipment === "motor"){
-
-    return "Motor diagnostics active. Check overload relay, winding temperature, bearings and phase balance.";
-  }
-
-  if(currentEquipment === "compressor"){
-
-    return "Compressor diagnostics active. Check pressure build-up, oil level and motor current.";
-  }
-
-  if(currentEquipment === "pump"){
-
-    return "Pump diagnostics active. Check suction blockage, impeller and discharge pressure.";
-  }
-
-  if(currentEquipment === "ac"){
-
-    return "HVAC diagnostics active. Check refrigerant pressure, airflow and compressor operation.";
+    return "The " +
+    (currentEquipment || "equipment") +
+    " operates using electrical, mechanical and control systems working together. Please specify which section you want explained.";
   }
 
   // ================= DEFAULT =================
 
-  return "Continue describing the symptoms including alarms, voltage, smell, sound, vibration or equipment behavior.";
+  return "Continue describing the issue or ask about repair methods, causes, estimated costs or operation details.";
+}
+
+// ================= FINAL DIAGNOSIS =================
+
+function finishDiagnosis(issue,cost){
+
+  diagnosisComplete = true;
+
+  probableIssue = issue;
+
+  estimatedCost = cost;
+
+  lastQuestion = "";
+}
+
+function diagnosisResult(){
+
+  return "Probable diagnosis: " +
+  probableIssue +
+  ". Estimated repair cost: " +
+  estimatedCost +
+  ". You may ask for repair method, causes, technician advice or further technical explanation.";
 }
 
 // ================= EQUIPMENT DETECTION =================
