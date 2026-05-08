@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Industrial AI Diagnostic Assistant - Sri Lanka</title>
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial;
+    }
+
+    body{
+      background:#0b1120;
+      color:white;
+      height:100vh;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      background:#111827;
+      padding:18px;
+      text-align:center;
+      font-size:24px;
+      border-bottom:1px solid #1f2937;
+      letter-spacing:1px;
+    }
+
+    #main{
+      flex:1;
+      display:flex;
+      overflow:hidden;
+    }
+
+    /* SIDEBAR */
+
+    #sidebar{
+      width:250px;
+      background:#111827;
+      border-right:1px solid #1f2937;
+      padding:20px;
+      overflow:auto;
+    }
+
+    .tab{
+      background:#1f2937;
+      padding:14px;
+      margin-bottom:12px;
+      border-radius:10px;
+      border:1px solid #374151;
+    }
+
+    /* CONTENT */
+
+    #content{
+      flex:1;
+      padding:20px;
+      overflow:auto;
+    }
+
+    .panel{
+      background:#111827;
+      border:1px solid #1f2937;
+      border-radius:15px;
+      padding:20px;
+      margin-bottom:20px;
+    }
+
+    h3{
+      margin-bottom:15px;
+      color:#60a5fa;
+      font-weight:normal;
+    }
+
+    button{
+      background:#2563eb;
+      color:white;
+      border:none;
+      padding:12px 22px;
+      border-radius:10px;
+      font-size:16px;
+      cursor:pointer;
+    }
+
+    button:hover{
+      background:#1d4ed8;
+    }
+
+    #chat{
+      height:430px;
+      overflow-y:auto;
+      background:#0f172a;
+      border-radius:10px;
+      padding:15px;
+      border:1px solid #1f2937;
+    }
+
+    .msg{
+      padding:12px;
+      margin-bottom:12px;
+      border-radius:10px;
+      line-height:1.6;
+      max-width:85%;
+    }
+
+    .user{
+      background:#2563eb;
+      margin-left:auto;
+      text-align:right;
+    }
+
+    .ai{
+      background:#374151;
+      margin-right:auto;
+    }
+
+    input[type=file]{
+      margin-top:15px;
+      color:white;
+    }
+
+    #preview{
+      margin-top:15px;
+      max-width:220px;
+      border-radius:10px;
+      display:none;
+      border:1px solid #374151;
+    }
+
+    #status{
+      margin-top:15px;
+      color:#9ca3af;
+    }
+
+    .info{
+      margin-top:15px;
+      background:#0f172a;
+      padding:15px;
+      border-radius:10px;
+      border:1px solid #1f2937;
+      color:#cbd5e1;
+      line-height:1.7;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  Industrial AI Diagnostic Assistant - Sri Lanka
+</header>
+
+<div id="main">
+
+  <!-- SIDEBAR -->
+
+  <div id="sidebar">
+
+    <div class="tab">Dashboard</div>
+    <div class="tab">Voice Assistant</div>
+    <div class="tab">Generators</div>
+    <div class="tab">ATS Systems</div>
+    <div class="tab">Motors</div>
+    <div class="tab">Compressors</div>
+    <div class="tab">Pumps</div>
+    <div class="tab">HVAC</div>
+    <div class="tab">Electrical Systems</div>
+
+  </div>
+
+  <!-- CONTENT -->
+
+  <div id="content">
+
+    <!-- VOICE -->
+
+    <div class="panel">
+
+      <h3>Voice Control</h3>
+
+      <button onclick="startAssistant()">
+        Start Assistant
+      </button>
+
+      <div id="status">
+        Status: Idle
+      </div>
+
+      <div class="info">
+        Sri Lankan industrial AI diagnostic assistant with voice conversation, repair estimates and service center recommendations.
+      </div>
+
+    </div>
+
+    <!-- IMAGE -->
+
+    <div class="panel">
+
+      <h3>Equipment Image</h3>
+
+      <input type="file" id="imageInput" accept="image/*">
+
+      <br>
+
+      <img id="preview">
+
+    </div>
+
+    <!-- CHAT -->
+
+    <div class="panel">
+
+      <h3>Diagnostic Conversation</h3>
+
+      <div id="chat"></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "en-US";
+recognition.continuous = false;
+recognition.interimResults = false;
+
+// ================= VARIABLES =================
+
+let active = false;
+let listening = false;
+
+let imageUploaded = false;
+
+let currentEquipment = "";
+let currentFault = "";
+
+let lastQuestion = "";
+
+let diagnosisComplete = false;
+
+let probableIssue = "";
+let estimatedCost = "";
+
+let memory = [];
+
+// ================= UI =================
+
+function addMessage(text,type){
+
+  let div = document.createElement("div");
+
+  div.className = "msg " + type;
+
+  div.innerText = text;
+
+  document.getElementById("chat")
+  .appendChild(div);
+
+  document.getElementById("chat")
+  .scrollTop =
+  document.getElementById("chat")
+  .scrollHeight;
+}
+
+function setStatus(t){
+
+  document.getElementById("status")
+  .innerText = "Status: " + t;
+}
+
+// ================= START =================
+
+function startAssistant(){
+
+  if(active) return;
+
+  active = true;
+
+  addMessage(
+    "Industrial assistant activated.",
+    "ai"
+  );
+
+  speak(
+    "Industrial assistant activated. Please describe the equipment problem."
+  );
+}
+
+// ================= SPEAK =================
+
+function speak(text){
+
+  speechSynthesis.cancel();
+
+  setStatus("Speaking");
+
+  let msg = new SpeechSynthesisUtterance(text);
+
+  msg.rate = 1;
+
+  msg.onend = function(){
+
+    if(active){
+
+      setTimeout(()=>{
+        listen();
+      },400);
+    }
+  };
+
+  speechSynthesis.speak(msg);
+}
+
+// ================= LISTEN =================
+
+function listen(){
+
+  if(!active) return;
+
+  if(listening) return;
+
+  listening = true;
+
+  setStatus("Listening");
+
+  try{
+
+    recognition.start();
+
+  }catch(e){
+
+    listening = false;
+
+    setTimeout(listen,1000);
+  }
+}
+
+// ================= RECOGNITION =================
+
+recognition.onresult = function(event){
+
+  listening = false;
+
+  let text =
+  event.results[0][0]
+  .transcript
+  .toLowerCase();
+
+  addMessage(text,"user");
+
+  memory.push(text);
+
+  let reply = brain(text);
+
+  addMessage(reply,"ai");
+
+  speak(reply);
+};
+
+recognition.onerror = function(){
+
+  listening = false;
+
+  if(active){
+
+    setTimeout(listen,1000);
+  }
+};
+
+recognition.onend = function(){
+
+  listening = false;
+};
+
+// ================= IMAGE =================
+
+document.getElementById("imageInput")
+.onchange = function(e){
+
+  let file = e.target.files[0];
+
+  if(file){
+
+    imageUploaded = true;
+
+    let reader = new FileReader();
+
+    reader.onload = function(){
+
+      let img =
+      document.getElementById("preview");
+
+      img.src = reader.result;
+
+      img.style.display = "block";
+    };
+
+    reader.readAsDataURL(file);
+
+    addMessage(
+      "Equipment image uploaded.",
+      "user"
+    );
+
+    speak(
+      "Image received successfully. Please describe the visible problem."
+    );
+  }
+};
+
+// ================= AI ENGINE =================
+
+function brain(t){
+
+  detectEquipment(t);
+
+  // ================= END =================
+
+  if(match(t,[
+    "bye",
+    "disconnect",
+    "end",
+    "thank you",
+    "thats all"
+  ])){
+
+    active = false;
+
+    return "Session completed. Industrial assistant disconnected.";
+  }
+
+  // ================= REPAIR LOCATION QUESTIONS =================
+
+  if(match(t,[
+    "repair company",
+    "repair companies",
+    "service center",
+    "technician",
+    "repair shop",
+    "where can repair"
+  ])){
+
+    return getRepairCompanies();
+  }
+
+  // ================= COST QUESTIONS =================
+
+  if(match(t,[
+    "cost",
+    "price",
+    "estimate"
+  ])){
+
+    if(diagnosisComplete){
+
+      return "Estimated repair cost in Sri Lanka for " +
+      probableIssue +
+      " is approximately " +
+      estimatedCost +
+      " depending on spare parts and labour.";
+    }
+
+    return "Please describe the equipment fault first for a repair estimate.";
+  }
+
+  // ================= AFTER DIAGNOSIS =================
+
+  if(diagnosisComplete){
+
+    if(match(t,[
+      "repair",
+      "fix",
+      "how repair"
+    ])){
+
+      return "Recommended repair for " +
+      probableIssue +
+      ": inspect damaged components, verify wiring, test protection systems and replace faulty parts.";
+    }
+
+    if(match(t,[
+      "cause",
+      "reason",
+      "why"
+    ])){
+
+      return "Likely causes include overload, poor maintenance, overheating, loose connections, moisture ingress or aging components.";
+    }
+
+    if(match(t,[
+      "safe",
+      "can operate",
+      "continue"
+    ])){
+
+      return "Operation is not recommended until the fault is repaired and safety inspection is completed.";
+    }
+  }
+
+  // ================= FOLLOW-UP =================
+
+  if(lastQuestion === "voltage"){
+
+    if(isYes(t)){
+
+      lastQuestion = "relay";
+
+      return "Understood. Do you hear relay or starter clicking?";
+    }
+    else{
+
+      finishDiagnosis(
+        "Power supply or battery failure",
+        "LKR 15,000 to 75,000"
+      );
+
+      return diagnosisResult();
+    }
+  }
+
+  if(lastQuestion === "relay"){
+
+    if(isYes(t)){
+
+      lastQuestion = "fuel";
+
+      return "Good. Is fuel or operating medium reaching correctly?";
+    }
+    else{
+
+      finishDiagnosis(
+        "Starter relay or contactor failure",
+        "LKR 25,000 to 120,000"
+      );
+
+      return diagnosisResult();
+    }
+  }
+
+  if(lastQuestion === "fuel"){
+
+    if(isYes(t)){
+
+      finishDiagnosis(
+        "Starter motor or controller issue",
+        "LKR 60,000 to 450,000"
+      );
+
+      return diagnosisResult();
+    }
+    else{
+
+      finishDiagnosis(
+        "Fuel blockage or supply interruption",
+        "LKR 10,000 to 80,000"
+      );
+
+      return diagnosisResult();
+    }
+  }
+
+  // ================= MAIN FAULTS =================
+
+  if(match(t,[
+    "not starting",
+    "cannot start",
+    "fails to start",
+    "wont start"
+  ])){
+
+    diagnosisComplete = false;
+
+    currentFault = "start";
+
+    lastQuestion = "voltage";
+
+    return "Understood. " +
+    (currentEquipment || "Equipment") +
+    " is not starting. Is supply voltage or battery condition normal?";
+  }
+
+  if(match(t,[
+    "overheat",
+    "high temperature",
+    "too hot"
+  ])){
+
+    finishDiagnosis(
+      "Cooling or overload problem",
+      "LKR 35,000 to 300,000"
+    );
+
+    return diagnosisResult();
+  }
+
+  if(match(t,[
+    "noise",
+    "vibration",
+    "knocking"
+  ])){
+
+    finishDiagnosis(
+      "Bearing wear or mechanical imbalance",
+      "LKR 45,000 to 350,000"
+    );
+
+    return diagnosisResult();
+  }
+
+  if(match(t,[
+    "no power",
+    "no voltage",
+    "no output"
+  ])){
+
+    finishDiagnosis(
+      "Breaker, AVR or protection system fault",
+      "LKR 40,000 to 400,000"
+    );
+
+    return diagnosisResult();
+  }
+
+  if(match(t,[
+    "trip",
+    "tripping"
+  ])){
+
+    finishDiagnosis(
+      "Overload or short circuit condition",
+      "LKR 25,000 to 250,000"
+    );
+
+    return diagnosisResult();
+  }
+
+  // ================= IMAGE =================
+
+  if(imageUploaded){
+
+    if(match(t,[
+      "burn",
+      "smoke",
+      "black"
+    ])){
+
+      finishDiagnosis(
+        "Burnt wiring or overheating damage",
+        "LKR 20,000 to 180,000"
+      );
+
+      return diagnosisResult();
+    }
+
+    if(match(t,[
+      "leak",
+      "oil",
+      "fuel leak"
+    ])){
+
+      finishDiagnosis(
+        "Seal, hose or pipe leakage",
+        "LKR 8,000 to 90,000"
+      );
+
+      return diagnosisResult();
+    }
+  }
+
+  // ================= GENERAL QUESTIONS =================
+
+  if(match(t,[
+    "how does it work",
+    "working principle",
+    "explain"
+  ])){
+
+    return "The " +
+    (currentEquipment || "equipment") +
+    " operates using electrical, mechanical and control systems working together. Please specify which section you want explained further.";
+  }
+
+  // ================= DEFAULT =================
+
+  return "Continue describing the issue or ask about repair cost, repair companies, causes, spare parts or operation.";
+}
+
+// ================= REPAIR COMPANIES =================
+
+function getRepairCompanies(){
+
+  if(currentEquipment === "generator"){
+
+    return `
+Recommended generator repair companies in Sri Lanka:
+
+1. DIMO - Colombo 14
+Phone: +94 11 244 9797
+
+2. Generator Service and Engineering - Homagama
+Phone: +94 77 734 0591
+
+3. Prime Power Generator Engineering - Padukka
+Phone: +94 77 745 3132
+
+4. Power Lanka Pvt Ltd - Homagama
+Phone: +94 77 778 6611
+`;
+  }
+
+  if(currentEquipment === "ats"){
+
+    return `
+Recommended ATS and industrial electrical repair companies:
+
+1. DIMO Engineering - Colombo
+Phone: +94 11 244 9797
+
+2. Circom Power Technologies - Kaduwela
+Phone: +94 77 607 8427
+
+3. Power Lanka Pvt Ltd - Homagama
+Phone: +94 77 778 6611
+`;
+  }
+
+  if(currentEquipment === "motor"){
+
+    return `
+Recommended motor repair companies:
+
+1. Pettah Motor Rewinding Shops - Colombo 11
+
+2. Ratmalana Industrial Motor Services
+
+3. Kandy Motor Rewinding Centers
+`;
+  }
+
+  return `
+Recommended Sri Lankan industrial repair companies:
+
+1. DIMO Engineering
+Phone: +94 11 244 9797
+
+2. Power Lanka Pvt Ltd
+Phone: +94 77 778 6611
+
+3. Circom Power Technologies
+Phone: +94 77 607 8427
+`;
+}
+
+// ================= FINAL DIAGNOSIS =================
+
+function finishDiagnosis(issue,cost){
+
+  diagnosisComplete = true;
+
+  probableIssue = issue;
+
+  estimatedCost = cost;
+
+  lastQuestion = "";
+}
+
+function diagnosisResult(){
+
+  return "Probable diagnosis: " +
+  probableIssue +
+  ". Estimated repair cost in Sri Lanka: " +
+  estimatedCost +
+  ". You may ask about repair companies, repair methods or causes.";
+}
+
+// ================= EQUIPMENT DETECTION =================
+
+function detectEquipment(t){
+
+  if(match(t,["generator","genset"])){
+    currentEquipment = "generator";
+  }
+
+  if(match(t,["ats","transfer switch"])){
+    currentEquipment = "ats";
+  }
+
+  if(match(t,["motor"])){
+    currentEquipment = "motor";
+  }
+
+  if(match(t,["compressor"])){
+    currentEquipment = "compressor";
+  }
+
+  if(match(t,["pump"])){
+    currentEquipment = "pump";
+  }
+
+  if(match(t,["ac","hvac","air conditioner"])){
+    currentEquipment = "ac";
+  }
+}
+
+// ================= HELPERS =================
+
+function match(text,arr){
+
+  return arr.some(
+    x => text.includes(x)
+  );
+}
+
+function isYes(t){
+
+  return [
+    "yes",
+    "correct",
+    "ok",
+    "working",
+    "normal",
+    "right",
+    "fine",
+    "good"
+  ].some(x => t.includes(x));
+}
+
+</script>
+
+</body>
+</html>
