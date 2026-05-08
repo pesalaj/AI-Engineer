@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Industrial AI Assistant</title>
+  <title>Industrial AI Diagnostic Assistant</title>
 
   <style>
 
@@ -18,6 +18,7 @@
       height:100vh;
       display:flex;
       flex-direction:column;
+      overflow:hidden;
     }
 
     header{
@@ -27,6 +28,7 @@
       font-size:24px;
       font-weight:bold;
       border-bottom:1px solid #1f2937;
+      letter-spacing:1px;
     }
 
     #main{
@@ -42,6 +44,7 @@
       background:#111827;
       border-right:1px solid #1f2937;
       padding:20px;
+      overflow:auto;
     }
 
     .tab{
@@ -51,6 +54,7 @@
       border-radius:10px;
       cursor:pointer;
       transition:0.3s;
+      border:1px solid #374151;
     }
 
     .tab:hover{
@@ -76,6 +80,7 @@
     h3{
       margin-bottom:15px;
       color:#60a5fa;
+      font-weight:normal;
     }
 
     button{
@@ -86,6 +91,7 @@
       border-radius:10px;
       font-size:16px;
       cursor:pointer;
+      transition:0.3s;
     }
 
     button:hover{
@@ -102,35 +108,42 @@
       max-width:220px;
       border-radius:10px;
       display:none;
+      border:1px solid #374151;
     }
 
     #chat{
-      height:300px;
+      height:380px;
       overflow-y:auto;
       background:#0f172a;
       padding:15px;
       border-radius:10px;
+      border:1px solid #1f2937;
     }
 
     .msg{
       padding:12px;
-      margin-bottom:10px;
+      margin-bottom:12px;
       border-radius:10px;
-      line-height:1.5;
+      line-height:1.6;
+      max-width:85%;
+      word-wrap:break-word;
     }
 
     .user{
       background:#2563eb;
+      margin-left:auto;
       text-align:right;
     }
 
     .ai{
       background:#374151;
+      margin-right:auto;
     }
 
     #status{
       margin-top:15px;
       color:#9ca3af;
+      font-size:14px;
     }
 
     .infoBox{
@@ -138,7 +151,19 @@
       padding:15px;
       border-radius:10px;
       margin-top:15px;
+      line-height:1.7;
+      border:1px solid #1f2937;
+      color:#d1d5db;
+    }
+
+    #systemInfo{
+      margin-top:15px;
+      padding:12px;
+      background:#0f172a;
+      border-radius:10px;
+      border:1px solid #1f2937;
       line-height:1.6;
+      color:#9ca3af;
     }
 
   </style>
@@ -166,6 +191,14 @@
 
     <div class="tab">ATS Diagnostics</div>
 
+    <div class="tab">Motor Systems</div>
+
+    <div class="tab">Compressors</div>
+
+    <div class="tab">Pump Systems</div>
+
+    <div class="tab">HVAC Systems</div>
+
     <div class="tab">System Status</div>
 
   </div>
@@ -188,6 +221,11 @@
         Status: Idle
       </div>
 
+      <div id="systemInfo">
+        Voice AI ready for industrial troubleshooting.<br>
+        Supports generators, ATS systems, motors, compressors, pumps and HVAC systems.
+      </div>
+
     </div>
 
     <!-- IMAGE PANEL -->
@@ -203,7 +241,7 @@
       <img id="preview">
 
       <div class="infoBox">
-        Upload generator, ATS panel, wiring, alarm display or damaged component images for better assistance.
+        Upload generator panels, ATS systems, motors, compressors, pumps, wiring, alarms, damaged components or fault displays for better assistance.
       </div>
 
     </div>
@@ -231,11 +269,21 @@ window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
 
 recognition.lang = "en-US";
+recognition.continuous = true;
+recognition.interimResults = false;
+
+// ================= VARIABLES =================
 
 let active = false;
 let imageUploaded = false;
+
+let currentEquipment = "";
+let currentFault = "";
+
 let mode = "general";
 let step = 0;
+
+let conversationMemory = [];
 
 // ================= UI =================
 
@@ -257,6 +305,7 @@ function addMessage(text,type){
 }
 
 function setStatus(t){
+
   document.getElementById("status")
   .innerText = "Status: " + t;
 }
@@ -265,7 +314,14 @@ function setStatus(t){
 
 function startAssistant(){
 
+  if(active) return;
+
   active = true;
+
+  addMessage(
+    "Industrial assistant activated.",
+    "ai"
+  );
 
   speak(
     "Industrial assistant activated. Please describe your equipment problem."
@@ -276,13 +332,19 @@ function startAssistant(){
 
 function speak(text){
 
+  setStatus("Speaking");
+
   let msg = new SpeechSynthesisUtterance(text);
 
   msg.rate = 1;
+  msg.pitch = 1;
 
   msg.onend = function(){
 
     if(active){
+
+      setStatus("Listening");
+
       listen();
     }
   };
@@ -296,21 +358,22 @@ function listen(){
 
   if(!active) return;
 
-  setStatus("Listening");
-
   try{
+
     recognition.start();
+
   }catch{
+
     setTimeout(listen,1000);
   }
 }
 
-// ================= INPUT =================
+// ================= VOICE INPUT =================
 
 recognition.onresult = function(event){
 
   let text =
-  event.results[0][0]
+  event.results[event.results.length - 1][0]
   .transcript
   .toLowerCase();
 
@@ -325,15 +388,19 @@ recognition.onresult = function(event){
   speak(reply);
 };
 
+recognition.onerror = function(){
+
+  setStatus("Listening");
+
+  setTimeout(listen,1200);
+};
+
 recognition.onend = function(){
 
   if(active){
+
     setTimeout(listen,800);
   }
-};
-
-recognition.onerror = function(){
-  setTimeout(listen,1200);
 };
 
 // ================= IMAGE =================
@@ -367,41 +434,169 @@ document.getElementById("imageInput")
     );
 
     speak(
-      "Image received. Please describe the fault."
+      "Image received successfully. Please describe the fault symptoms."
     );
   }
 };
 
-// ================= AI =================
+// ================= AI ENGINE =================
 
 function brain(t){
 
-  // END
+  conversationMemory.push(t);
+
+  // ================= END SESSION =================
+
   if(match(t,[
     "bye",
     "thank you",
     "disconnect",
-    "end"
+    "end",
+    "thats all",
+    "goodbye"
   ])){
 
     active = false;
 
-    return "Session completed. System disconnected.";
+    setStatus("Disconnected");
+
+    return "Session completed. Industrial assistant disconnected.";
   }
 
-  // START ISSUE
+  // ================= EQUIPMENT DETECTION =================
+
+  if(match(t,[
+    "generator",
+    "genset"
+  ])){
+    currentEquipment = "generator";
+  }
+
+  if(match(t,[
+    "ats",
+    "transfer switch"
+  ])){
+    currentEquipment = "ats";
+  }
+
+  if(match(t,[
+    "compressor"
+  ])){
+    currentEquipment = "compressor";
+  }
+
+  if(match(t,[
+    "pump",
+    "water pump"
+  ])){
+    currentEquipment = "pump";
+  }
+
+  if(match(t,[
+    "motor",
+    "electric motor"
+  ])){
+    currentEquipment = "motor";
+  }
+
+  if(match(t,[
+    "air conditioner",
+    "ac unit",
+    "hvac"
+  ])){
+    currentEquipment = "ac";
+  }
+
+  // ================= NOT STARTING =================
+
   if(match(t,[
     "not starting",
     "fails to start",
-    "cannot start"
+    "cannot start",
+    "wont start",
+    "will not start"
   ])){
+
+    currentFault = "not_starting";
 
     mode = "start";
 
     step = 1;
 
-    return "Check battery voltage. Is battery above 12 point 5 volts?";
+    return "Understood. " +
+    (currentEquipment || "Equipment") +
+    " is not starting. First verify supply voltage or battery condition. Is voltage normal?";
   }
+
+  // ================= OVERHEATING =================
+
+  if(match(t,[
+    "overheat",
+    "high temperature",
+    "too hot",
+    "heating"
+  ])){
+
+    currentFault = "overheat";
+
+    return "Check cooling system, airflow, coolant level, radiator condition and operating load. Do you notice blocked ventilation or excessive load?";
+  }
+
+  // ================= NOISE =================
+
+  if(match(t,[
+    "noise",
+    "vibration",
+    "knocking",
+    "sound"
+  ])){
+
+    currentFault = "noise";
+
+    return "Abnormal sound may indicate bearing wear, imbalance, loose mounting or internal mechanical damage. Is the sound metallic, vibrating or knocking?";
+  }
+
+  // ================= NO POWER =================
+
+  if(match(t,[
+    "no power",
+    "no voltage",
+    "no output"
+  ])){
+
+    currentFault = "power";
+
+    return "Check breakers, AVR, fuses, output terminals and protection trips. Is the breaker tripped?";
+  }
+
+  // ================= TRIPPING =================
+
+  if(match(t,[
+    "trip",
+    "tripping",
+    "breaker trip"
+  ])){
+
+    currentFault = "trip";
+
+    return "Protection trip detected. Check overload condition, short circuits, earth faults and abnormal current draw.";
+  }
+
+  // ================= LEAK =================
+
+  if(match(t,[
+    "oil leak",
+    "fuel leak",
+    "water leak",
+    "leaking"
+  ])){
+
+    currentFault = "leak";
+
+    return "Inspect hoses, seals, gaskets, pipe joints and tanks carefully. Determine whether leakage increases during operation.";
+  }
+
+  // ================= START FLOW =================
 
   if(mode === "start"){
 
@@ -411,13 +606,13 @@ function brain(t){
 
         step = 2;
 
-        return "Do you hear starter relay clicking?";
+        return "Good. Do you hear relay or starter clicking during start attempt?";
       }
       else{
 
         mode = "general";
 
-        return "Battery problem detected. Charge or replace battery.";
+        return "Power supply problem detected. Check battery, charger, incoming power supply, fuse and terminals.";
       }
     }
 
@@ -427,13 +622,13 @@ function brain(t){
 
         step = 3;
 
-        return "Is fuel reaching engine correctly?";
+        return "Understood. Is fuel, air or operating medium reaching correctly?";
       }
       else{
 
         mode = "general";
 
-        return "Starter relay or ATS control fault.";
+        return "Possible relay, contactor, starter solenoid or control board issue.";
       }
     }
 
@@ -443,56 +638,89 @@ function brain(t){
 
       if(isYes(t)){
 
-        return "Possible starter motor or controller fault.";
+        return "Possible starter motor, actuator, controller or timing issue.";
       }
       else{
 
-        return "Fuel blockage or fuel solenoid issue.";
+        return "Possible blockage, valve fault, clogged filter or supply interruption.";
       }
     }
   }
 
-  // ATS
-  if(t.includes("ats")){
+  // ================= EQUIPMENT SPECIFIC =================
 
-    return "Check ATS contactor, sensing voltage, relay and control fuse.";
+  if(currentEquipment === "generator"){
+
+    return "Generator diagnostics active. Check fuel system, AVR, governor, battery condition, starter system and output voltage stability.";
   }
 
-  // OVERLOAD
-  if(t.includes("overload")){
+  if(currentEquipment === "ats"){
 
-    return "Reduce load and verify generator capacity.";
+    return "ATS diagnostics active. Check sensing voltage, contactor coils, timers, relays, interlocks and transfer sequence.";
   }
 
-  // IMAGE SUPPORT
+  if(currentEquipment === "compressor"){
+
+    return "Compressor diagnostics active. Check pressure build-up, oil level, cooling system, motor current and pressure switches.";
+  }
+
+  if(currentEquipment === "pump"){
+
+    return "Pump diagnostics active. Check impeller condition, suction blockage, cavitation, motor rotation and discharge pressure.";
+  }
+
+  if(currentEquipment === "motor"){
+
+    return "Motor diagnostics active. Check winding temperature, bearings, overload relay, insulation condition and phase balance.";
+  }
+
+  if(currentEquipment === "ac"){
+
+    return "HVAC diagnostics active. Check compressor operation, refrigerant pressure, condenser airflow and thermostat control.";
+  }
+
+  // ================= IMAGE SUPPORT =================
+
   if(imageUploaded){
 
     if(match(t,[
       "burn",
       "smoke",
-      "black"
+      "black",
+      "burnt"
     ])){
 
-      return "Possible burnt wiring or overheating condition detected.";
+      return "Possible overheating or burnt electrical connection detected. Inspect terminals, cables and load conditions carefully.";
     }
 
     if(match(t,[
-      "oil",
-      "fuel leak",
-      "leak"
+      "rust",
+      "corrosion"
     ])){
 
-      return "Possible fuel or oil leakage. Inspect seals and pipes.";
+      return "Corrosion detected. Inspect moisture ingress, terminals, grounding and environmental protection.";
     }
   }
 
-  return "Please describe symptoms like sound, voltage, alarms or behavior for further diagnosis.";
+  // ================= SHORT INPUT =================
+
+  if(t.length < 3){
+
+    return "Please describe the equipment problem more clearly.";
+  }
+
+  // ================= DEFAULT =================
+
+  return "Continue describing the issue. Include alarms, voltage, pressure, smell, sound, vibration or operating behavior for deeper analysis.";
 }
 
 // ================= HELPERS =================
 
 function match(text,arr){
-  return arr.some(x => text.includes(x));
+
+  return arr.some(
+    x => text.includes(x)
+  );
 }
 
 function isYes(t){
@@ -503,7 +731,9 @@ function isYes(t){
     "correct",
     "working",
     "fine",
-    "right"
+    "right",
+    "normal",
+    "good"
   ].some(x => t.includes(x));
 }
 
